@@ -8,17 +8,29 @@ CFLAGS = -Wall -Wextra -O2 -fPIC \
          -fvisibility=hidden
 
 # Platform-specific flags
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Linux)
-    CFLAGS += -fcf-protection=full
-    LDFLAGS = -Wl,-z,relro,-z,now -Wl,-z,noexecstack
-    SHARED_EXT = so
+ifeq ($(OS),Windows_NT)
+    # Windows (MinGW)
+    CFLAGS += -D_WIN32_WINNT=0x0600 # For VirtualAlloc, VirtualLock
+    LDFLAGS = -lws2_32
+    SHARED_EXT = dll
     SHARED_FLAGS = -shared
-endif
-ifeq ($(UNAME_S),Darwin)
-    LDFLAGS = -Wl,-bind_at_load
-    SHARED_EXT = dylib
-    SHARED_FLAGS = -dynamiclib
+    TEST_RUN_CMD = $(TEST_BINARY).exe
+else
+    # Linux/macOS
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux)
+        CFLAGS += -fcf-protection=full
+        LDFLAGS = -Wl,-z,relro,-z,now -Wl,-z,noexecstack
+        SHARED_EXT = so
+        SHARED_FLAGS = -shared
+        TEST_RUN_CMD = LD_LIBRARY_PATH=. ./$(TEST_BINARY)
+    endif
+    ifeq ($(UNAME_S),Darwin)
+        LDFLAGS = -Wl,-bind_at_load
+        SHARED_EXT = dylib
+        SHARED_FLAGS = -dynamiclib
+        TEST_RUN_CMD = DYLD_LIBRARY_PATH=. ./$(TEST_BINARY)
+    endif
 endif
 
 # Clang-specific hardening
@@ -56,22 +68,23 @@ $(SHARED_LIB): $(OBJECTS)
 
 # Build test program
 test: $(SHARED_LIB) $(TEST_SOURCES)
-	$(CC) $(CFLAGS) -L. -o $(TEST_BINARY) $(TEST_SOURCES) -llseco
+	$(CC) $(CFLAGS) -L. -o $(TEST_BINARY) $(TEST_SOURCES) -l:$(SHARED_LIB)
 	@echo "Built test program: $(TEST_BINARY)"
 
 # Run test
 run-test: test
-ifeq ($(UNAME_S),Darwin)
-	DYLD_LIBRARY_PATH=. ./$(TEST_BINARY)
-else
-	LD_LIBRARY_PATH=. ./$(TEST_BINARY)
-endif
+	$(TEST_RUN_CMD)
 
 # Clean build artifacts
 clean:
-	rm -f $(OBJECTS) $(STATIC_LIB) $(SHARED_LIB) $(TEST_BINARY)
+	-rm -f $(OBJECTS) $(STATIC_LIB) $(SHARED_LIB) $(TEST_BINARY) $(TEST_BINARY).exe
 	@echo "Cleaned build artifacts"
 
+# Install/Uninstall are not supported on Windows via this Makefile
+ifeq ($(OS),Windows_NT)
+install uninstall:
+	@echo "make install/uninstall is not supported on Windows."
+else
 # Install library (requires sudo on most systems)
 install: $(STATIC_LIB) $(SHARED_LIB)
 	install -d /usr/local/lib
@@ -87,6 +100,7 @@ uninstall:
 	rm -f /usr/local/lib/$(SHARED_LIB)
 	rm -f /usr/local/include/lseco_ffi.h
 	@echo "Uninstalled library"
+endif
 
 # Help
 help:

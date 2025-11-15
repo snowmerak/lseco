@@ -1,0 +1,30 @@
+# .gitignore for Lseco
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Test binary
+test_lseco
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Core dumps
+core
+core.*
+
+# Go build artifacts
+examples/go/main

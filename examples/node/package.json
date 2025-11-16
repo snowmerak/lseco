@@ -1,0 +1,21 @@
+{
+  "name": "lseco-node-example",
+  "version": "1.0.0",
+  "description": "Node.js FFI example for Lseco secure memory library",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "keywords": [
+    "lseco",
+    "secure",
+    "memory",
+    "ffi",
+    "encryption"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "koffi": "^2.9.0"
+  }
+}
